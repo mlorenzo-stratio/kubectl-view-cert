@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
 
-	"github.com/lmolas/kubectl-view-cert/internal/parse"
+	"github.com/mlorenzo-stratio/kubectl-view-cert/internal/parse"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"

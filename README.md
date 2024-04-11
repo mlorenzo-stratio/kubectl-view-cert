@@ -1,7 +1,7 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/lmolas/kubectl-view-cert)](https://goreportcard.com/report/github.com/lmolas/kubectl-view-cert)
-[![github actions](https://github.com/lmolas/kubectl-view-cert/workflows/golangci-lint/badge.svg)](https://github.com/lmolas/kubectl-view-cert/actions?query=workflow%3Agolangci-lint)
-[![GitHub release](https://img.shields.io/github/v/release/lmolas/kubectl-view-cert)](https://github.com/lmolas/kubectl-view-cert/releases/latest)
-[![License](https://img.shields.io/github/license/lmolas/kubectl-view-cert)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mlorenzo-stratio/kubectl-view-cert)](https://goreportcard.com/report/github.com/mlorenzo-stratio/kubectl-view-cert)
+[![github actions](https://github.com/mlorenzo-stratio/kubectl-view-cert/workflows/golangci-lint/badge.svg)](https://github.com/mlorenzo-stratio/kubectl-view-cert/actions?query=workflow%3Agolangci-lint)
+[![GitHub release](https://img.shields.io/github/v/release/mlorenzo-stratio/kubectl-view-cert)](https://github.com/mlorenzo-stratio/kubectl-view-cert/releases/latest)
+[![License](https://img.shields.io/github/license/mlorenzo-stratio/kubectl-view-cert)](LICENSE)
 
 # kubectl-view-cert
 
@@ -23,7 +23,7 @@ kubectl view-cert plugin supports standard kubectl flags.
 Some specific flags have been added:
 
   -A, --all-namespaces                 Query all objects in all API groups, both namespaced and non-namespaced
-  
+
   -E, --expired                        Show only expired certificates
 
   -D, --expired-days-from-now int      Show expired certificates at date in future (now plus number of days)
@@ -36,7 +36,7 @@ If you use [kubectx](https://github.com/ahmetb/kubectx) and [kubens](https://git
 
 The following command allows browsing all certificates found in kubernetes.io/tls secrets from current namespace:
 
-    kubectl view-cert 
+    kubectl view-cert
 
 If you want to browse all namespaces, you can do:
 
