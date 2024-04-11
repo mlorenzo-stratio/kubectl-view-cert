@@ -8,6 +8,7 @@ import (
 type Certificate struct {
 	SecretName   string
 	Namespace    string
+	Type         string
 	Version      int
 	SerialNumber string
 	Issuer       string

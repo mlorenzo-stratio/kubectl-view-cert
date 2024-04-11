@@ -11,6 +11,7 @@ import (
 type CertificateData struct {
 	SecretName    string
 	Namespace     string
+	Type          string
 	Certificate   string
 	CaCertificate string
 	SecretKeys    []string
@@ -25,15 +26,17 @@ type ParsedCertificateData struct {
 }
 
 // NewCertificateData takes secret data and extracts base64 pem strings
-func NewCertificateData(ns, secretName string, data map[string]interface{}, secretKey string, listKeys bool) (*CertificateData, error) {
+func NewCertificateData(ns, secretName string, data map[string]interface{}, secretKey string, listKeys bool, showCa bool) (*CertificateData, error) {
+	_, ok := data["data"]
+	if !ok {
+		return nil, nil
+	}
 	certsMap := data["data"].(map[string]interface{})
 
 	certData := CertificateData{
 		SecretName: secretName,
 		Namespace:  ns,
 	}
-
-	// TODO: Check if certsMap is nil ?
 
 	if secretKey != "" {
 		if val, ok := certsMap[secretKey]; ok {
@@ -45,15 +48,17 @@ func NewCertificateData(ns, secretName string, data map[string]interface{}, secr
 
 	secretType := fmt.Sprintf("%v", data["type"])
 
-	if secretType == "kubernetes.io/tls" { // nolint gosec
+	if secretType == "kubernetes.io/tls" ||
+		secretType == "Opaque" { // nolint gosec
 		if val, ok := certsMap["tls.crt"]; ok {
 			certData.Certificate = fmt.Sprintf("%v", val)
 		}
-
-		if val, ok := certsMap["ca.crt"]; ok {
-			certData.CaCertificate = fmt.Sprintf("%v", val)
+		if showCa {
+			if val, ok := certsMap["ca.crt"]; ok {
+				certData.CaCertificate = fmt.Sprintf("%v", val)
+			}
 		}
-
+		certData.Type = secretType
 		return &certData, nil
 	}
 
