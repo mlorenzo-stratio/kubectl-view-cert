@@ -233,10 +233,15 @@ func getDatas(ctx context.Context, ri dynamic.ResourceInterface) ([]*Certificate
 
 	tlsSecrets, err := ri.List(ctx, v1.ListOptions{FieldSelector: "type=kubernetes.io/tls"})
 	if err != nil {
-		return datas, fmt.Errorf("failed to get secrets: %w", err)
+		return datas, fmt.Errorf("failed to get 'kubernetes.io/tls' secrets: %w", err)
 	}
+	OpaqueSecrets, errOpaque := ri.List(ctx, v1.ListOptions{FieldSelector: "type=Opaque"})
+	if errOpaque != nil {
+		return datas, fmt.Errorf("failed to get 'Opaque' secrets: %w", err)
+	}
+	secrets := append(tlsSecrets.Items, OpaqueSecrets.Items...)
 
-	for _, tlsSecret := range tlsSecrets.Items {
+	for _, tlsSecret := range secrets {
 		certData, caCertData, _, err := parseData(tlsSecret.GetNamespace(), tlsSecret.GetName(), tlsSecret.Object, "", false)
 		if err != nil {
 			return datas, err

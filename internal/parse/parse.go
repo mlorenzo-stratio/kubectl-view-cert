@@ -26,14 +26,16 @@ type ParsedCertificateData struct {
 
 // NewCertificateData takes secret data and extracts base64 pem strings
 func NewCertificateData(ns, secretName string, data map[string]interface{}, secretKey string, listKeys bool) (*CertificateData, error) {
+	_, ok := data["data"]
+	if !ok {
+		return nil, fmt.Errorf("unsupported secret")
+	}
 	certsMap := data["data"].(map[string]interface{})
 
 	certData := CertificateData{
 		SecretName: secretName,
 		Namespace:  ns,
 	}
-
-	// TODO: Check if certsMap is nil ?
 
 	if secretKey != "" {
 		if val, ok := certsMap[secretKey]; ok {
@@ -45,7 +47,8 @@ func NewCertificateData(ns, secretName string, data map[string]interface{}, secr
 
 	secretType := fmt.Sprintf("%v", data["type"])
 
-	if secretType == "kubernetes.io/tls" { // nolint gosec
+	if secretType == "kubernetes.io/tls" ||
+		secretType == "Opaque" { // nolint gosec
 		if val, ok := certsMap["tls.crt"]; ok {
 			certData.Certificate = fmt.Sprintf("%v", val)
 		}
