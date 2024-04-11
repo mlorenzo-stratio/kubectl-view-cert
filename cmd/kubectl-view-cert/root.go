@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v2"
 
 	"github.com/lmolas/kubectl-view-cert/internal/parse"
 
@@ -27,6 +28,7 @@ const (
 	expiredFlag            = "expired"
 	showCaCertFlag         = "show-ca"
 	expiredDaysFromNowFlag = "expired-days-from-now"
+	yamlOutput             = "yaml"
 )
 
 type parsedFlags struct {
@@ -34,6 +36,7 @@ type parsedFlags struct {
 	expired       bool
 	showCaCert    bool
 	expiredInDays int
+	yamlOutput    bool
 	secretName    string
 	secretKey     string
 }
@@ -99,6 +102,7 @@ func init() {
 	rootCmd.Flags().BoolP(expiredFlag, "E", false, "Show only expired certificates")
 	rootCmd.Flags().BoolP(showCaCertFlag, "S", false, "Show CA certificates")
 	rootCmd.Flags().IntP(expiredDaysFromNowFlag, "D", 0, "Show expired certificates at date in future (now plus number of days)")
+	rootCmd.Flags().BoolP(yamlOutput, "Y", false, "YAML output")
 
 	cf.AddFlags(rootCmd.Flags())
 	if err := flag.Set("logtostderr", "true"); err != nil {
@@ -147,6 +151,11 @@ func parseFlagsAndArguments(command *cobra.Command, args []string) parsedFlags {
 		expiredInDays = 0
 	}
 
+	yamlOutput, err := command.Flags().GetBool(yamlOutput)
+	if err != nil {
+		yamlOutput = false
+	}
+
 	var secretName, secretKey string
 	if len(args) > 0 {
 		secretName = args[0]
@@ -156,7 +165,7 @@ func parseFlagsAndArguments(command *cobra.Command, args []string) parsedFlags {
 		secretKey = args[1]
 	}
 
-	return parsedFlags{allNs, expired, showCaCert, expiredInDays, secretName, secretKey}
+	return parsedFlags{allNs, expired, showCaCert, expiredInDays, yamlOutput, secretName, secretKey}
 }
 
 // nolint gocognit // Better readability in one block
@@ -194,7 +203,7 @@ func run(command *cobra.Command, args []string) error {
 			}
 		} else {
 			// Display
-			err = displayDatas(datas)
+			err = displayDatas(datas, parsedFlags.yamlOutput)
 			if err != nil {
 				return err
 			}
@@ -219,7 +228,7 @@ func run(command *cobra.Command, args []string) error {
 		}
 
 		// Display
-		err = displayDatas(filteredDatas)
+		err = displayDatas(filteredDatas, parsedFlags.yamlOutput)
 		if err != nil {
 			return err
 		}
@@ -294,10 +303,15 @@ func getData(ctx context.Context, secretName, ns, secretKey string, ri dynamic.R
 	return datas, nil, nil
 }
 
-func displayDatas(datas []*Certificate) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "    ")
-	return encoder.Encode(&datas)
+func displayDatas(datas []*Certificate, yamlOutput bool) error {
+	if yamlOutput {
+		encoder := yaml.NewEncoder(os.Stdout)
+		return encoder.Encode(&datas)
+	} else {
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "    ")
+		return encoder.Encode(&datas)
+	}
 }
 
 func getResourceInterface(allNs bool, secretName string) (string, dynamic.ResourceInterface, error) {
