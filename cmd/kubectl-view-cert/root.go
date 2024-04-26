@@ -353,7 +353,7 @@ func getResourceInterface(allNs bool, secretName string) (string, dynamic.Resour
 }
 
 func parseData(ns, secretName string, data map[string]interface{}, secretKey string, listKeys, showCA bool) (certData, caCertData *Certificate, secretKeys *[]string) {
-	secretCertData, err := parse.NewCertificateData(ns, secretName, data, secretKey, listKeys, showCA)
+	secretCertData, secretKeysList, err := parse.NewCertificateData(ns, secretName, data, secretKey, listKeys, showCA)
 	if err != nil {
 		klog.V(1).Infoln("msg", "failed to parse secret '"+ns+"/"+secretName+"'", "err", err)
 		return nil, nil, nil
@@ -380,6 +380,7 @@ func parseData(ns, secretName string, data map[string]interface{}, secretKey str
 			SecretName:   parsedCerts.SecretName,
 			Namespace:    parsedCerts.Namespace,
 			Type:         secretCertData.Type,
+			SecretKey:    secretKeysList[0],
 			IsCA:         parsedCerts.Certificate.IsCA,
 			Issuer:       parsedCerts.Certificate.Issuer.String(),
 			SerialNumber: fmt.Sprintf("%x", parsedCerts.Certificate.SerialNumber),
@@ -396,6 +397,7 @@ func parseData(ns, secretName string, data map[string]interface{}, secretKey str
 		caCertData = &Certificate{
 			SecretName:   parsedCerts.SecretName,
 			Namespace:    parsedCerts.Namespace,
+			SecretKey:    secretKeysList[1],
 			Type:         secretCertData.Type,
 			IsCA:         parsedCerts.CaCertificate.IsCA,
 			Issuer:       parsedCerts.CaCertificate.Issuer.String(),

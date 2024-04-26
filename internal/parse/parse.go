@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"os"
+	"strings"
 )
 
 // CertificateData struct contains base64 pem data
@@ -26,10 +28,14 @@ type ParsedCertificateData struct {
 }
 
 // NewCertificateData takes secret data and extracts base64 pem strings
-func NewCertificateData(ns, secretName string, data map[string]interface{}, secretKey string, listKeys, showCa bool) (*CertificateData, error) {
+// nolint gocognit
+func NewCertificateData(ns, secretName string, data map[string]interface{}, secretKey string, listKeys, showCa bool) (*CertificateData, []string, error) {
 	_, ok := data["data"]
+	var keysList []string
+	returnCertPemKey := "tls.crt"
+	returnCaPemKey := "ca.crt"
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 	certsMap := data["data"].(map[string]interface{})
 
@@ -43,24 +49,43 @@ func NewCertificateData(ns, secretName string, data map[string]interface{}, secr
 			certData.Certificate = fmt.Sprintf("%v", val)
 		}
 
-		return &certData, nil
+		return &certData, nil, nil
 	}
 
 	secretType := fmt.Sprintf("%v", data["type"])
 
+	secretCrtPemKeyList := strings.Split(os.Getenv("CRT_PEM_KEY_LIST"), ",")
+	secretCaPemKeyList := strings.Split(os.Getenv("CA_PEM_KEY_LIST"), ",")
 	// nolint gosec
 	if secretType == "kubernetes.io/tls" ||
 		secretType == "Opaque" {
 		if val, ok := certsMap["tls.crt"]; ok {
 			certData.Certificate = fmt.Sprintf("%v", val)
+		} else {
+			for _, crtPemKey := range secretCrtPemKeyList {
+				if val, ok := certsMap[crtPemKey]; ok {
+					certData.Certificate = fmt.Sprintf("%v", val)
+					returnCertPemKey = crtPemKey
+					break
+				}
+			}
 		}
 		if showCa {
 			if val, ok := certsMap["ca.crt"]; ok {
 				certData.CaCertificate = fmt.Sprintf("%v", val)
+			} else {
+				for _, caPemKey := range secretCaPemKeyList {
+					if val, ok := certsMap[caPemKey]; ok {
+						certData.CaCertificate = fmt.Sprintf("%v", val)
+						returnCaPemKey = caPemKey
+						break
+					}
+				}
 			}
 		}
+		keysList = append(keysList, returnCertPemKey, returnCaPemKey)
 		certData.Type = secretType
-		return &certData, nil
+		return &certData, keysList, nil
 	}
 
 	if listKeys && certsMap != nil && len(certsMap) > 0 {
@@ -72,10 +97,10 @@ func NewCertificateData(ns, secretName string, data map[string]interface{}, secr
 			i++
 		}
 
-		return &certData, nil
+		return &certData, nil, nil
 	}
 
-	return nil, fmt.Errorf("unsupported secret type %s", secretType)
+	return nil, nil, fmt.Errorf("unsupported secret type %s", secretType)
 }
 
 // ParseCertificates method parses each base64 pem strings and creates x509 certificates
