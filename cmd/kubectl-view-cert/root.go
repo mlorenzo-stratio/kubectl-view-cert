@@ -1,5 +1,6 @@
 package main
 
+// nolint depguard
 import (
 	"context"
 	"encoding/json"
@@ -248,20 +249,22 @@ func getDatas(ctx context.Context, ri dynamic.ResourceInterface, showCa bool) ([
 	if errOpaque != nil {
 		return datas, fmt.Errorf("failed to get 'Opaque' secrets: %w", err)
 	}
-	secrets := append(tlsSecrets.Items, OpaqueSecrets.Items...)
+	secrets := tlsSecrets.Items
+	secrets = append(secrets, OpaqueSecrets.Items...)
 
-	var is_replicated bool
+	var isReplicated bool
 	for _, secret := range secrets {
-		is_replicated = false
+		isReplicated = false
 		certData, caCertData, _ := parseData(secret.GetNamespace(), secret.GetName(), secret.Object, "", false, showCa)
-		for annotation_name := range secret.GetAnnotations() {
-			if annotation_name == "replicator.v1.mittwald.de/replicated-at" {
-				is_replicated = true
+		for annotationName := range secret.GetAnnotations() {
+			if annotationName == "replicator.v1.mittwald.de/replicated-at" {
+				isReplicated = true
+                               // nolint gomnd
 				klog.V(2).Infoln("msg", "skipping secret replicated from another namespace '"+secret.GetNamespace()+"/"+secret.GetName()+"'")
 			}
 			continue
 		}
-		if is_replicated {
+		if isReplicated {
 			continue
 		}
 		if certData != nil {
@@ -307,11 +310,10 @@ func displayDatas(datas []*Certificate, yamlOutput bool) error {
 	if yamlOutput {
 		encoder := yaml.NewEncoder(os.Stdout)
 		return encoder.Encode(&datas)
-	} else {
-		encoder := json.NewEncoder(os.Stdout)
-		encoder.SetIndent("", "    ")
-		return encoder.Encode(&datas)
 	}
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "    ")
+	return encoder.Encode(&datas)
 }
 
 func getResourceInterface(allNs bool, secretName string) (string, dynamic.ResourceInterface, error) {
@@ -350,8 +352,8 @@ func getResourceInterface(allNs bool, secretName string) (string, dynamic.Resour
 	return ns, ri, nil
 }
 
-func parseData(ns, secretName string, data map[string]interface{}, secretKey string, listKeys bool, showCA bool) (certData, caCertData *Certificate, secretKeys *[]string) {
-	secretCertData, err := parse.NewCertificateData(ns, secretName, data, secretKey, listKeys, showCA)
+func parseData(ns, secretName string, data map[string]interface{}, secretKey string, listKeys, showCA bool) (certData, caCertData *Certificate, secretKeys *[]string) {
+	secretCertData, secretKeysList, err := parse.NewCertificateData(ns, secretName, data, secretKey, listKeys, showCA)
 	if err != nil {
 		klog.V(1).Infoln("msg", "failed to parse secret '"+ns+"/"+secretName+"'", "err", err)
 		return nil, nil, nil
@@ -378,6 +380,7 @@ func parseData(ns, secretName string, data map[string]interface{}, secretKey str
 			SecretName:   parsedCerts.SecretName,
 			Namespace:    parsedCerts.Namespace,
 			Type:         secretCertData.Type,
+			SecretKey:    secretKeysList[0],
 			IsCA:         parsedCerts.Certificate.IsCA,
 			Issuer:       parsedCerts.Certificate.Issuer.String(),
 			SerialNumber: fmt.Sprintf("%x", parsedCerts.Certificate.SerialNumber),
@@ -394,6 +397,7 @@ func parseData(ns, secretName string, data map[string]interface{}, secretKey str
 		caCertData = &Certificate{
 			SecretName:   parsedCerts.SecretName,
 			Namespace:    parsedCerts.Namespace,
+			SecretKey:    secretKeysList[1],
 			Type:         secretCertData.Type,
 			IsCA:         parsedCerts.CaCertificate.IsCA,
 			Issuer:       parsedCerts.CaCertificate.Issuer.String(),
